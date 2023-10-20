@@ -1,0 +1,85 @@
+stages:
+  - test
+  - build-image
+  - deploy
+
+unit-test:
+  stage: test
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/golang:1.20-alpine3.17
+  variables:
+    CGO_ENABLED: 0
+  before_script:
+    - go install gotest.tools/gotestsum@latest
+  script:
+    - gotestsum --junitfile=unit-tests.xml
+  artifacts:
+    when: always
+    reports:
+      junit: unit-tests.xml
+    expire_in: 1 day
+  only:
+    - merge_request
+
+api-test:
+  stage: test
+  image: ${CI_DEPENDENCY_PROXY_GROUP_IMAGE_PREFIX}/golang:1.20-alpine3.17
+  variables:
+    CGO_ENABLED: 0
+  script:
+    - go test -tags=test_api  ./...
+  when: manual
+  only:
+    - merge_request
+
+build:
+  stage: build-image
+  image: docker:stable
+  services:
+    - docker:dind
+  before_script:
+    - |
+      # docker variables for name and tag of new image
+      export DOCKER_TAG="${CI_COMMIT_TAG}"
+      export DOCKER_REPO="$CI_REGISTRY_IMAGE"
+      export DOCKER_IMAGE="${DOCKER_REPO}:${DOCKER_TAG}"
+  script:
+    - docker login -u "$CI_REGISTRY_USER" -p "$CI_REGISTRY_PASSWORD" "$CI_REGISTRY"
+    - docker pull "$DOCKER_IMAGE" || true
+    - docker build --pull --cache-from "$DOCKER_IMAGE" --cache-from "${DOCKER_REPO}:master" -t "$DOCKER_IMAGE" .
+    - docker push "$DOCKER_IMAGE"
+  when: on_success
+  only:
+    - /^v.*$/
+
+
+deploy:
+  stage: deploy
+  image: kroniak/ssh-client
+  before_script:
+    - |
+      # docker variables for name and tag of new image
+      export DOCKER_TAG="${CI_COMMIT_TAG}"
+      export DOCKER_REPO="$CI_REGISTRY_IMAGE"
+      export DOCKER_IMAGE="${DOCKER_REPO}:${DOCKER_TAG}"
+  script:
+    - chmod 400 $MASTER_SSH_KEY
+    - ssh -o StrictHostKeyChecking=no -i $MASTER_SSH_KEY "${MASTER_SSH_USER}@${MASTER_HOST}" "docker login -u ${CI_DEPLOY_USER} -p ${CI_DEPLOY_PASSWORD} ${CI_REGISTRY}"
+    - ssh -o StrictHostKeyChecking=no -i $MASTER_SSH_KEY "${MASTER_SSH_USER}@${MASTER_HOST}" "docker stop ${CI_PROJECT_NAME} || true"
+    - ssh -o StrictHostKeyChecking=no -i $MASTER_SSH_KEY "${MASTER_SSH_USER}@${MASTER_HOST}" "docker rm -f ${CI_PROJECT_NAME} || true"
+    - ssh -o StrictHostKeyChecking=no -i $MASTER_SSH_KEY "${MASTER_SSH_USER}@${MASTER_HOST}" "docker rmi \$(docker images -q ${DOCKER_REPO}) || true"
+    - ssh -o StrictHostKeyChecking=no -i $MASTER_SSH_KEY "${MASTER_SSH_USER}@${MASTER_HOST}"
+      docker run
+      --name=$CI_PROJECT_NAME
+      --restart=always
+      --network="host"
+      -e BOT_TOKEN=${BOT_TOKEN}
+      -e JWT=${JWT}
+      -e MAIN_URL=${MAIN_URL}
+      -e MIRROR_URL=${MIRROR_URL}
+      -e ADDRESS=${ADDRESS}
+      -p 8080:8080
+      -v "/apps/${CI_PROJECT_NAME}/data:/data"
+      -d $DOCKER_IMAGE
+  when: manual
+  only:
+    - /^v.*$/

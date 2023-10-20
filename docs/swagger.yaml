@@ -1,0 +1,425 @@
+basePath: /api/v1/
+definitions:
+  controllers.ReplayMsgUserInput:
+    properties:
+      msgid:
+        type: integer
+      text:
+        type: string
+      tgid:
+        type: integer
+    required:
+    - msgid
+    - text
+    - tgid
+    type: object
+  controllers.SendAllMsgUserInput:
+    properties:
+      text:
+        type: string
+    required:
+    - text
+    type: object
+  controllers.SendMsgUserInput:
+    properties:
+      text:
+        type: string
+      tgid:
+        type: integer
+    required:
+    - text
+    - tgid
+    type: object
+  controllers.UpdateUserRoleInput:
+    properties:
+      id:
+        type: integer
+      role:
+        type: integer
+    required:
+    - id
+    type: object
+  controllers.UpdateUserSubInput:
+    properties:
+      id:
+        type: integer
+      sub:
+        type: integer
+    required:
+    - id
+    type: object
+  models.Anime:
+    properties:
+      name:
+        type: string
+      url:
+        type: string
+    type: object
+  models.User:
+    properties:
+      role:
+        type: integer
+      serieInfo:
+        additionalProperties:
+          type: object
+        type: object
+      subManageType:
+        type: integer
+      telegramID:
+        type: integer
+    type: object
+  models.UserFullInfo:
+    properties:
+      favorites:
+        items:
+          $ref: '#/definitions/models.Anime'
+        type: array
+      firstName:
+        type: string
+      id:
+        type: integer
+      lastName:
+        type: string
+      role:
+        type: string
+      subManageType:
+        type: string
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API bot
+  title: avost-bot
+  version: 1.0.0
+paths:
+  /bot/replay:
+    post:
+      consumes:
+      - application/json
+      description: Replay msg user
+      operationId: protected-replay-msg-user
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ReplayMsgUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: data
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: ReplayMsgUser
+      tags:
+      - bot
+  /bot/send:
+    post:
+      consumes:
+      - application/json
+      description: Send message user
+      operationId: protected-send-msg-user
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SendMsgUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: data
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: SendMsgUser
+      tags:
+      - bot
+  /bot/sends:
+    post:
+      consumes:
+      - application/json
+      description: Send all msg User
+      operationId: protected-send-all-msg-user
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SendAllMsgUserInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: data
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: SendAllMsgUser
+      tags:
+      - bot
+  /bot/stat:
+    get:
+      consumes:
+      - text/html
+      description: get stat
+      operationId: get-stat-info
+      parameters:
+      - description: start at
+        format: date
+        in: query
+        name: start
+        type: string
+      - description: end at
+        format: date
+        in: query
+        name: stop
+        type: string
+      - description: one of h or m
+        format: string
+        in: query
+        name: format
+        type: string
+      produces:
+      - text/html
+      responses:
+        "200":
+          description: data
+          schema:
+            type: html
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: GetStat
+      tags:
+      - bot
+  /bot/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: get user info
+      operationId: get-user-info
+      parameters:
+      - description: id
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.UserFullInfo'
+            type: array
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: GetUserInfo
+      tags:
+      - bot
+  /repository/admins:
+    get:
+      consumes:
+      - application/json
+      description: get admins
+      operationId: get-users-admins
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: GetUsersAdmins
+      tags:
+      - repository
+  /repository/role:
+    patch:
+      consumes:
+      - application/json
+      description: update user role
+      operationId: update-user-role
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateUserRoleInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: data
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: UpdateUserRole
+      tags:
+      - repository
+  /repository/sub:
+    patch:
+      consumes:
+      - application/json
+      description: update user sub
+      operationId: update-user-sub
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.UpdateUserSubInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: data
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: UpdateUserSub
+      tags:
+      - repository
+  /repository/users:
+    get:
+      consumes:
+      - application/json
+      description: get all users
+      operationId: get-users
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: GetUsers
+      tags:
+      - repository
+  /repository/users-file:
+    get:
+      consumes:
+      - text/xml
+      description: get all users
+      operationId: get-users-file
+      produces:
+      - text/xml
+      responses:
+        "200":
+          description: data
+          schema:
+            type: file
+        "400":
+          description: error
+          schema:
+            type: string
+        "417":
+          description: error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: GetUsersFile
+      tags:
+      - repository
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorizations
+    type: apiKey
+swagger: "2.0"
